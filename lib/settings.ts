@@ -1,7 +1,7 @@
 import { browser } from 'wxt/browser';
 import type { ExtensionSettings } from './types';
 
-export const DEFAULT_ANTHROPIC_MODEL = 'claude-3-5-sonnet-latest';
+export const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-4-6';
 export const DEFAULT_OPENAI_MODEL = 'gpt-4.1-mini';
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {

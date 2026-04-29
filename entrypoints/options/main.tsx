@@ -12,9 +12,11 @@ import {
 import type { AiProvider, BackgroundResponse, ExtensionSettings, SectionToggles } from '@/lib/types';
 
 const ANTHROPIC_MODELS = [
-  DEFAULT_ANTHROPIC_MODEL,
-  'claude-3-5-haiku-latest',
-  'claude-3-opus-latest',
+  'claude-sonnet-4-6',
+  'claude-opus-4-6',
+  'claude-haiku-4-5-20251001',
+  'claude-3-5-sonnet-20241022',
+  'claude-3-5-haiku-20241022',
 ];
 
 const OPENAI_MODELS = [DEFAULT_OPENAI_MODEL, 'gpt-4.1', 'gpt-4o-mini'];

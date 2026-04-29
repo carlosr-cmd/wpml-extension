@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :host {
+    /* Design tokens — refined minimalism with a teal accent */
+    --wpml-bg: #ffffff;
+    --wpml-bg-subtle: #fafaf9;
+    --wpml-border: #e7e5e4;
+    --wpml-border-strong: #d6d3d1;
+    --wpml-text: #1c1917;
+    --wpml-text-muted: #57534e;
+    --wpml-text-subtle: #78716c;
+    --wpml-accent: #0f766e;
+    --wpml-accent-hover: #115e59;
+    --wpml-accent-soft: #ccfbf1;
+    --wpml-shadow: 0 1px 2px rgba(28, 25, 23, 0.04),
+      0 8px 24px -8px rgba(28, 25, 23, 0.12);
+
+    /* Reset font inheritance from wpml.org */
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+      'Segoe UI', sans-serif;
+    font-feature-settings: 'cv11', 'ss01';
+    font-variation-settings: 'opsz' 32;
+    color: var(--wpml-text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Resize handle styling for the floating panel */
+.wpml-panel {
+  resize: both;
+  overflow: hidden;
+  min-width: 320px;
+  min-height: 240px;
+  max-width: 600px;
+  max-height: 800px;
+}
+
+/* Custom scrollbar inside the panel */
+.wpml-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.wpml-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.wpml-scroll::-webkit-scrollbar-thumb {
+  background: var(--wpml-border-strong);
+  border-radius: 3px;
+}

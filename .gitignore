@@ -1,0 +1,12 @@
+node_modules
+.output
+.wxt
+_incoming
+prompt.txt
+stats.html
+stats-*.json
+*.log
+.DS_Store
+.idea
+.vscode/*
+!.vscode/extensions.json

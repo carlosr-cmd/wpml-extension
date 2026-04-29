@@ -1,0 +1,32 @@
+import type { CustomerHistoryItem } from '@/lib/types';
+
+interface Props {
+  items: CustomerHistoryItem[];
+}
+
+export function CustomerHistorySection({ items }: Props) {
+  if (items.length === 0) {
+    return (
+      <p className="text-xs italic" style={{ color: 'var(--wpml-text-subtle)' }}>
+        No related history found.
+      </p>
+    );
+  }
+  return (
+    <ul className="space-y-1.5">
+      {items.map((item) => (
+        <li key={item.url}>
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block text-xs leading-snug underline-offset-2 hover:underline"
+            style={{ color: 'var(--wpml-accent)' }}
+          >
+            {item.title}
+          </a>
+        </li>
+      ))}
+    </ul>
+  );
+}

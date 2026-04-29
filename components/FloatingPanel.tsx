@@ -176,19 +176,33 @@ function Header({
 function StatusLine({ state }: { state: ReturnType<typeof useTicketAnalysis> }) {
   const labels: Record<string, string> = {
     idle: 'Ready',
-    scraping: 'Reading ticket',
-    analyzing: 'Analyzing with AI',
+    scraping: 'Reading ticket…',
+    analyzing: 'Analyzing with AI…',
     ready: 'Updated',
     cached: 'Sin cambios',
     empty: 'No automatic analysis',
     error: 'Error',
   };
+  const isLoading = state.phase === 'scraping' || state.phase === 'analyzing';
+  const isError = state.phase === 'error';
   return (
     <div
       className="flex items-center justify-between gap-2 border-b px-4 py-2 text-[11px]"
-      style={{ borderColor: 'var(--wpml-border)', color: 'var(--wpml-text-muted)' }}
+      style={{
+        borderColor: 'var(--wpml-border)',
+        color: isError ? '#b91c1c' : isLoading ? 'var(--wpml-accent)' : 'var(--wpml-text-muted)',
+        backgroundColor: isLoading ? 'var(--wpml-accent-soft)' : isError ? '#fef2f2' : undefined,
+      }}
     >
-      <span className="truncate">{labels[state.phase]}</span>
+      <span className="flex items-center gap-1.5 truncate font-medium">
+        {isLoading && (
+          <svg className="animate-spin h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+          </svg>
+        )}
+        {labels[state.phase]}
+      </span>
       {state.ticket?.status && <span className="shrink-0">{state.ticket.status}</span>}
     </div>
   );

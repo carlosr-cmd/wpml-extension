@@ -18,11 +18,7 @@ const ERRATA_SEARCH_URL = 'https://wpml.org/en/htmx/known-issues/search-issues';
 
 export function scrapeTicket(documentRef: Document = document): ScrapedTicket {
   const canonicalUrl = getCanonicalUrl(documentRef);
-  const title = cleanText(
-    documentRef.querySelector('h1')?.textContent ??
-      documentRef.querySelector('title')?.textContent ??
-      '',
-  );
+  const title = cleanText(scrapeTitle(documentRef));
   const posts = findPostElements(documentRef).map((element, index) =>
     scrapePost(element, index, canonicalUrl),
   );
@@ -133,6 +129,27 @@ function extractNonce(documentRef: Document): string | null {
     documentRef.body.textContent?.match(/_wpnonce["']?\s*[:=]\s*["']([a-z0-9]+)["']/i)?.[1] ??
     null
   );
+}
+
+function scrapeTitle(documentRef: Document): string {
+  // bbPress-specific selectors, from most to least specific
+  const bbpSelectors = [
+    '.bbp-topic-title',
+    'h1.entry-title',
+    '#bbp-topic-title',
+    '[class*="topic-title"]',
+  ];
+  for (const sel of bbpSelectors) {
+    const text = documentRef.querySelector(sel)?.textContent;
+    if (text?.trim()) return text;
+  }
+  // Fallback: any h1 that contains brackets (likely the ticket title)
+  const h1s = Array.from(documentRef.querySelectorAll('h1'));
+  const bracketH1 = h1s.find((el) => /\[.+\]/.test(el.textContent ?? ''));
+  if (bracketH1?.textContent?.trim()) return bracketH1.textContent;
+  // Last resort: page <title>, strip site name suffix
+  const pageTitle = documentRef.querySelector('title')?.textContent ?? '';
+  return pageTitle.replace(/\s*[|\-–—].*$/, '').trim();
 }
 
 function findPostElements(documentRef: Document): Element[] {
@@ -254,11 +271,17 @@ function extractErrataLinks(documentRef: Document): ErrataCandidate[] {
   );
 }
 
-async function fetchHtml(url: string): Promise<Document> {
-  const response = await fetch(url, { credentials: 'include' });
-  if (!response.ok) throw new Error(`Failed to fetch ${url}: ${response.status}`);
-  const html = await response.text();
-  return new DOMParser().parseFromString(html, 'text/html');
+async function fetchHtml(url: string, timeoutMs = 10_000): Promise<Document> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { credentials: 'include', signal: controller.signal });
+    if (!response.ok) throw new Error(`Failed to fetch ${url}: ${response.status}`);
+    const html = await response.text();
+    return new DOMParser().parseFromString(html, 'text/html');
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function fetchHtmlOrNull(url: string): Promise<Document | null> {

@@ -78,39 +78,14 @@ export async function fetchErrataCandidates(ticket: ScrapedTicket): Promise<Erra
   const query = buildSearchQuery(ticket);
   if (!query) return [];
 
-  try {
-    const formDoc = await fetchHtml('https://wpml.org/en/htmx/known-issues/search-form/');
-    const nonce =
-      formDoc.querySelector<HTMLInputElement>('input[name="_wpnonce"]')?.value ??
-      formDoc.body.textContent?.match(/_wpnonce["']?\s*[:=]\s*["']([a-z0-9]+)["']/i)?.[1];
-    if (!nonce) return [];
+  const docs = await Promise.allSettled([
+    fetchHtml(`https://wpml.org/?s=${encodeURIComponent(query)}`),
+    fetchHtml(`https://wpml.org/known-issues/?s=${encodeURIComponent(query)}`),
+  ]);
 
-    const body = new URLSearchParams({
-      _wpnonce: nonce,
-      wpml_lang: 'en',
-      wpv_post_search: query,
-      'wpv-relationship-filter': '0',
-      'wpv-wpcf-errata-type': '',
-      'wpv-wpcf-errata-status': '1',
-    });
-
-    const response = await fetch('https://wpml.org/en/htmx/known-issues/search-issues', {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-        'HX-Request': 'true',
-        'HX-Target': 'search_issues_results',
-      },
-      body,
-    });
-    if (!response.ok) return [];
-    const html = await response.text();
-    return extractErrataLinks(new DOMParser().parseFromString(html, 'text/html')).slice(0, 8);
-  } catch (error) {
-    console.warn('[wpml-ext] errata fetch failed', error);
-    return [];
-  }
+  return uniqueByUrl(
+    docs.flatMap((result) => (result.status === 'fulfilled' ? extractErrataLinks(result.value) : [])),
+  ).slice(0, 8);
 }
 
 function findPostElements(documentRef: Document): Element[] {

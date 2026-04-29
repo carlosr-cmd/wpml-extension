@@ -3,7 +3,6 @@ import { browser } from 'wxt/browser';
 import { AccordionSection } from './AccordionSection';
 import { FrustrationSection } from './sections/FrustrationSection';
 import { ErrataSection } from './sections/ErrataSection';
-import { CustomerHistorySection } from './sections/CustomerHistorySection';
 import { SimilarTicketsSection } from './sections/SimilarTicketsSection';
 import { SuggestedReplySection } from './sections/SuggestedReplySection';
 import { frustrationColor } from '@/lib/colors';
@@ -64,19 +63,6 @@ export function FloatingPanel() {
             <AccordionSection title="Errata" rightSlot={<Count n={state.result?.errata.length ?? 0} />}>
               {state.result ? (
                 <ErrataSection items={state.result.errata} />
-              ) : (
-                <SectionPlaceholder />
-              )}
-            </AccordionSection>
-          )}
-
-          {state.settings?.sections.customerHistory !== false && (
-            <AccordionSection
-              title="Customer history"
-              rightSlot={<Count n={state.result?.customerHistory.length ?? 0} />}
-            >
-              {state.result ? (
-                <CustomerHistorySection items={state.result.customerHistory} />
               ) : (
                 <SectionPlaceholder />
               )}

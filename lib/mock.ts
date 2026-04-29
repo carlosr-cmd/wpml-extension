@@ -19,14 +19,6 @@ export const MOCK_ANALYSIS: AnalysisResult = {
         'Customer reports incorrect term counts on translated taxonomy archives.',
     },
   ],
-  customerHistory: [
-    {
-      title: '[Resolved] Translation is 100% complete but stuck in queue',
-      url: 'https://wpml.org/forums/topic/translation-is-100-complete-and-ive-marked-it-completed-but-it-wont-leave-the-queue-or-allow-me/',
-      whyRelated:
-        'Same site, recurring issue with translation queue not finalizing.',
-    },
-  ],
   similarTickets: [
     {
       title: '[Resolved] Translation queue does not complete',

@@ -16,7 +16,6 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   sections: {
     frustration: true,
     errata: true,
-    customerHistory: true,
     similarTickets: true,
     suggestedReply: true,
   },

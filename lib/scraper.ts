@@ -47,20 +47,12 @@ export function scrapeTicket(documentRef: Document = document): ScrapedTicket {
   };
 }
 
-export function titleStartsAssigned(ticket: ScrapedTicket): boolean {
-  return ticket.title.trim().toLowerCase().startsWith('[assigned]');
-}
+// Matches [Assigned], [Asignado], [Assigné], [Zugewiesen], etc.
+const ASSIGNED_PREFIXES = ['[assigned]', '[asignado]', '[assigné]', '[zugewiesen]', '[toegewezen]'];
 
-export async function fetchCustomerHistory(
-  profileUrl: string | null | undefined,
-  currentUrl: string,
-): Promise<RelatedTicketCandidate[]> {
-  if (!profileUrl) return [];
-  const doc = await fetchHtmlOrNull(profileUrl);
-  if (!doc) return [];
-  return extractTicketLinks(doc)
-    .filter((item) => normalizeTicketUrl(item.url) !== normalizeTicketUrl(currentUrl))
-    .slice(0, 3);
+export function titleStartsAssigned(ticket: ScrapedTicket): boolean {
+  const lower = ticket.title.trim().toLowerCase();
+  return ASSIGNED_PREFIXES.some((prefix) => lower.startsWith(prefix));
 }
 
 export async function fetchSimilarTickets(ticket: ScrapedTicket): Promise<RelatedTicketCandidate[]> {

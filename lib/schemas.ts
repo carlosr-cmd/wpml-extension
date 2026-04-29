@@ -12,12 +12,6 @@ export const ErrataItemSchema = z.object({
   whyRelevant: z.string().min(1),
 });
 
-export const CustomerHistoryItemSchema = z.object({
-  title: z.string().min(1),
-  url: z.string().url(),
-  whyRelated: z.string().min(1),
-});
-
 export const SimilarTicketItemSchema = z.object({
   title: z.string().min(1),
   url: z.string().url(),
@@ -42,7 +36,6 @@ export const SuggestedReplySchema = z.object({
 export const AnalysisResultSchema = z.object({
   frustration: FrustrationSchema,
   errata: z.array(ErrataItemSchema).max(5),
-  customerHistory: z.array(CustomerHistoryItemSchema).max(3),
   similarTickets: z.array(SimilarTicketItemSchema).max(3),
   suggestedReply: SuggestedReplySchema,
 });

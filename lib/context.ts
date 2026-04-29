@@ -1,9 +1,4 @@
-import {
-  fetchCustomerHistory,
-  fetchErrataCandidates,
-  fetchSimilarTickets,
-  scrapeTicket,
-} from './scraper';
+import { fetchErrataCandidates, fetchSimilarTickets, scrapeTicket } from './scraper';
 import { getCachedTicket, hasNewRelevantPosts } from './storage';
 import type { TicketContext } from './types';
 
@@ -17,26 +12,13 @@ export async function collectTicketContext(): Promise<TicketContext> {
   const isIncremental = !!cached && hasNewRelevantPosts(cached, relevantPostIds);
 
   if (isIncremental) {
-    // Only new posts arrived — skip external fetches to save time
-    return {
-      ticket,
-      historyCandidates: [],
-      errataCandidates: [],
-      similarTicketCandidates: [],
-    };
+    return { ticket, errataCandidates: [], similarTicketCandidates: [] };
   }
 
-  // Full analysis: fetch external candidates in parallel with a 6s timeout each
-  const [historyCandidates, errataCandidates, similarTicketCandidates] = await Promise.all([
-    fetchCustomerHistory(ticket.originalCustomer?.profileUrl, ticket.canonicalUrl),
+  const [errataCandidates, similarTicketCandidates] = await Promise.all([
     fetchErrataCandidates(ticket),
     fetchSimilarTickets(ticket),
   ]);
 
-  return {
-    ticket,
-    historyCandidates,
-    errataCandidates,
-    similarTicketCandidates,
-  };
+  return { ticket, errataCandidates, similarTicketCandidates };
 }

@@ -43,7 +43,6 @@ export function buildAnalysisPrompt(
       requiredOutputShape: {
         frustration: { score: 'integer 1-10', label: 'short label', reasoning: 'brief evidence-based explanation' },
         errata: [{ title: 'string', url: 'absolute URL', whyRelevant: 'string' }],
-        customerHistory: [{ title: 'string', url: 'absolute URL', whyRelated: 'string' }],
         similarTickets: [{ title: 'string', url: 'absolute URL', status: 'string or null', whySimilar: 'string' }],
         suggestedReply: {
           body: '2 to 4 paragraphs, uses [CLIENT], same language as ticket or English fallback',
@@ -67,7 +66,6 @@ export function buildAnalysisPrompt(
       previousAnalysis: isIncremental ? previousResult : undefined,
       candidates: isIncremental ? undefined : {
         errata: context.errataCandidates,
-        customerHistory: context.historyCandidates,
         similarTickets: context.similarTicketCandidates,
       },
     },

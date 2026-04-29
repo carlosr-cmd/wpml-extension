@@ -22,7 +22,6 @@ export interface ProviderSettings {
 export interface SectionToggles {
   frustration: boolean;
   errata: boolean;
-  customerHistory: boolean;
   similarTickets: boolean;
   suggestedReply: boolean;
 }
@@ -68,6 +67,7 @@ export interface RelatedTicketCandidate {
   excerpt?: string;
 }
 
+
 export interface ErrataCandidate {
   title: string;
   url: string;
@@ -77,7 +77,6 @@ export interface ErrataCandidate {
 
 export interface TicketContext {
   ticket: ScrapedTicket;
-  historyCandidates: RelatedTicketCandidate[];
   errataCandidates: ErrataCandidate[];
   similarTicketCandidates: RelatedTicketCandidate[];
 }
@@ -92,12 +91,6 @@ export interface ErrataItem {
   title: string;
   url: string;
   whyRelevant: string;
-}
-
-export interface CustomerHistoryItem {
-  title: string;
-  url: string;
-  whyRelated: string;
 }
 
 export interface SimilarTicketItem {
@@ -124,7 +117,6 @@ export interface SuggestedReply {
 export interface AnalysisResult {
   frustration: FrustrationAnalysis;
   errata: ErrataItem[];
-  customerHistory: CustomerHistoryItem[];
   similarTickets: SimilarTicketItem[];
   suggestedReply: SuggestedReply;
 }

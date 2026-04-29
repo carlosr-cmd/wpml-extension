@@ -230,7 +230,6 @@ function OptionsPage() {
 const SECTION_LABELS: Array<[keyof SectionToggles, string]> = [
   ['frustration', 'Frustration'],
   ['errata', 'Errata'],
-  ['customerHistory', 'Customer history'],
   ['similarTickets', 'Similar tickets'],
   ['suggestedReply', 'Suggested reply'],
 ];

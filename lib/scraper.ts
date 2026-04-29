@@ -13,8 +13,8 @@ const SUPPORTER_MARKERS = [
   'support team',
   'wpml contractor',
 ];
-const ERRATA_SEARCH_FORM_URL = 'https://wpml.org/en/htmx/known-issues/search-form/';
-const ERRATA_SEARCH_URL = 'https://wpml.org/en/htmx/known-issues/search-issues';
+
+const MAX_POST_CHARS = 800;
 
 export function scrapeTicket(documentRef: Document = document): ScrapedTicket {
   const canonicalUrl = getCanonicalUrl(documentRef);
@@ -75,80 +75,24 @@ export async function fetchSimilarTickets(ticket: ScrapedTicket): Promise<Relate
 export async function fetchErrataCandidates(ticket: ScrapedTicket): Promise<ErrataCandidate[]> {
   const query = buildSearchQuery(ticket);
   if (!query) return [];
-
-  const htmxResults = await fetchErrataCandidatesFromHtmx(query);
-  if (htmxResults.length > 0) return htmxResults;
-
-  return fetchErrataCandidatesFromPublicSearch(query);
-}
-
-async function fetchErrataCandidatesFromHtmx(query: string): Promise<ErrataCandidate[]> {
-  const formDoc = await fetchHtmlOrNull(ERRATA_SEARCH_FORM_URL);
-  const nonce = formDoc ? extractNonce(formDoc) : null;
-  if (!nonce) return [];
-
-  const body = new URLSearchParams({
-    _wpnonce: nonce,
-    wpml_lang: 'en',
-    wpv_post_search: query,
-    'wpv-relationship-filter': '0',
-    'wpv-wpcf-errata-type': '',
-    'wpv-wpcf-errata-status': '1',
-  });
-
-  const response = await fetch(ERRATA_SEARCH_URL, {
-    method: 'POST',
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
-      'HX-Request': 'true',
-      'HX-Target': 'search_issues_results',
-    },
-    body,
-  }).catch(() => null);
-  if (!response?.ok) return [];
-
-  const html = await response.text();
-  return extractErrataLinks(new DOMParser().parseFromString(html, 'text/html')).slice(0, 8);
-}
-
-async function fetchErrataCandidatesFromPublicSearch(query: string): Promise<ErrataCandidate[]> {
-  const docs = await Promise.allSettled([
-    fetchHtml(`https://wpml.org/?s=${encodeURIComponent(query)}`),
-    fetchHtml(`https://wpml.org/known-issues/?s=${encodeURIComponent(query)}`),
-  ]);
-
-  return uniqueByUrl(
-    docs.flatMap((result) => (result.status === 'fulfilled' ? extractErrataLinks(result.value) : [])),
-  ).slice(0, 8);
-}
-
-function extractNonce(documentRef: Document): string | null {
-  return (
-    documentRef.querySelector<HTMLInputElement>('input[name="_wpnonce"]')?.value ??
-    documentRef.body.textContent?.match(/_wpnonce["']?\s*[:=]\s*["']([a-z0-9]+)["']/i)?.[1] ??
-    null
-  );
+  const doc = await fetchHtmlOrNull(`https://wpml.org/?s=${encodeURIComponent(query)}`);
+  if (!doc) return [];
+  return extractErrataLinks(doc).slice(0, 8);
 }
 
 function scrapeTitle(documentRef: Document): string {
-  // bbPress-specific selectors, from most to least specific
-  const bbpSelectors = [
-    '.bbp-topic-title',
-    'h1.page-title',
-    'h1.entry-title',
-    '#bbp-topic-title',
-    '[class*="topic-title"]',
-  ];
-  for (const sel of bbpSelectors) {
-    const text = documentRef.querySelector(sel)?.textContent;
-    if (text?.trim()) return text;
+  // Try h1.page-title first — confirmed selector on wpml.org forums
+  const selectors = ['h1.page-title', 'h1.entry-title', '#bbp-topic-title'];
+  for (const sel of selectors) {
+    const text = documentRef.querySelector(sel)?.textContent?.trim();
+    if (text && text.length > 4) return text;
   }
-  // Fallback: any h1 that contains brackets (likely the ticket title)
-  const h1s = Array.from(documentRef.querySelectorAll('h1'));
-  const bracketH1 = h1s.find((el) => /\[.+\]/.test(el.textContent ?? ''));
-  if (bracketH1?.textContent?.trim()) return bracketH1.textContent;
-  // Last resort: page <title>, strip site name suffix
+  // Any h1 containing a bracket prefix like [Assigned]
+  const bracketH1 = Array.from(documentRef.querySelectorAll('h1')).find(
+    (el) => /\[[^\]]+\]/.test(el.textContent ?? ''),
+  );
+  if (bracketH1?.textContent?.trim()) return bracketH1.textContent.trim();
+  // Last resort: strip site name from <title>
   const pageTitle = documentRef.querySelector('title')?.textContent ?? '';
   return pageTitle.replace(/\s*[|\-–—].*$/, '').trim();
 }
@@ -185,11 +129,12 @@ function scrapePost(element: Element, index: number, canonicalUrl: string): Tick
       element.querySelector('time, .bbp-reply-post-date, .date')?.textContent ??
       '',
   );
-  const text = cleanText(
+  const rawText = cleanText(
     element.querySelector('.bbp-reply-content, .reply-content, .post-content, .entry-content')?.textContent ??
       element.textContent ??
       '',
   );
+  const text = rawText.length > MAX_POST_CHARS ? rawText.slice(0, MAX_POST_CHARS) + '…' : rawText;
 
   return {
     id,

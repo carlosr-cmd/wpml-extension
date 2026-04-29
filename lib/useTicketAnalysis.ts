@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { browser } from 'wxt/browser';
 import { collectTicketContext } from './context';
 import { getPublicSettings, type PublicSettings } from './publicSettings';
+import { getCachedTicket, hasNewRelevantPosts } from './storage';
 import { scrapeTicket, titleStartsAssigned } from './scraper';
 import type {
   AnalysisPhase,
@@ -29,13 +30,11 @@ export function useTicketAnalysis(): TicketAnalysisState {
   const [error, setError] = useState<string | null>(null);
   const [settings, setSettings] = useState<PublicSettings | null>(null);
 
-  const analyze = useCallback(async (force = false) => {
+  const runAnalysis = useCallback(async (currentTicket: ScrapedTicket, force: boolean) => {
     setError(null);
-    setCacheStatus(null);
     setPhase('scraping');
     try {
       const context = await collectTicketContext();
-      setTicket(context.ticket);
       setPhase('analyzing');
       const response = await browser.runtime.sendMessage({
         type: 'ANALYZE_TICKET',
@@ -55,40 +54,71 @@ export function useTicketAnalysis(): TicketAnalysisState {
     }
   }, []);
 
+  // Manual refresh triggered by the user
+  const analyze = useCallback(async (force = false) => {
+    const currentTicket = scrapeTicket();
+    setTicket(currentTicket);
+    setCacheStatus(null);
+    await runAnalysis(currentTicket, force);
+  }, [runAnalysis]);
+
   useEffect(() => {
     let cancelled = false;
+
     async function init() {
-      const publicSettings = await getPublicSettings();
-      const currentTicket = scrapeTicket();
+      const [publicSettings, currentTicket] = await Promise.all([
+        getPublicSettings(),
+        Promise.resolve(scrapeTicket()),
+      ]);
       if (cancelled) return;
+
       setSettings(publicSettings);
       setTicket(currentTicket);
+
       if (!publicSettings.enabled) {
         setPhase('empty');
         return;
       }
-      if (titleStartsAssigned(currentTicket)) {
-        await analyze(false);
+
+      // 1. Load from cache immediately so the user sees data right away
+      const cached = await getCachedTicket(currentTicket.canonicalUrl);
+      if (cancelled) return;
+
+      if (cached) {
+        setResult(cached.result);
+        setCacheStatus('sin-cambios');
+        setPhase('cached');
+
+        // 2. Check if new posts have arrived since the last analysis
+        const relevantPostIds = currentTicket.relevantPosts.map((p) => p.id);
+        const hasNew = hasNewRelevantPosts(cached, relevantPostIds);
+        if (!hasNew) {
+          return; // Nothing new — keep showing cached result
+        }
+
+        // 3. New posts exist — re-analyze incrementally (don't clear the existing result)
+        if (cancelled) return;
+        await runAnalysis(currentTicket, false);
         return;
       }
+
+      // 4. No cache: auto-analyze only for [Assigned] tickets
+      if (titleStartsAssigned(currentTicket)) {
+        await runAnalysis(currentTicket, false);
+        return;
+      }
+
       setPhase('empty');
     }
+
     void init();
     return () => {
       cancelled = true;
     };
-  }, [analyze]);
+  }, [runAnalysis]);
 
   return useMemo(
-    () => ({
-      phase,
-      ticket,
-      result,
-      cacheStatus,
-      error,
-      settings,
-      analyze,
-    }),
+    () => ({ phase, ticket, result, cacheStatus, error, settings, analyze }),
     [phase, ticket, result, cacheStatus, error, settings, analyze],
   );
 }

@@ -33,9 +33,11 @@ async function handleAnalyze(
     throw new Error('The extension is disabled in Settings.');
   }
 
-  const relevantPostIds = request.context.ticket.relevantPosts.map((post) => post.id);
+  const allRelevantPostIds = request.context.ticket.relevantPosts.map((post) => post.id);
   const cached = await getCachedTicket(request.context.ticket.canonicalUrl);
-  if (!request.force && cached && !hasNewRelevantPosts(cached, relevantPostIds)) {
+
+  // Return cache if nothing changed
+  if (!request.force && cached && !hasNewRelevantPosts(cached, allRelevantPostIds)) {
     return toOk({
       result: cached.result,
       cacheStatus: 'sin-cambios',
@@ -57,7 +59,28 @@ async function handleAnalyze(
     throw new Error(`Missing ${provider === 'anthropic' ? 'Anthropic' : 'OpenAI'} API key.`);
   }
 
-  const prompt = buildAnalysisPrompt(request.context, settings);
+  // Incremental: if there's a previous analysis, send only new posts to the AI
+  const newPostIds = cached
+    ? allRelevantPostIds.filter((id) => !cached.consideredPostIds.includes(id))
+    : allRelevantPostIds;
+
+  const contextForAi = (cached && newPostIds.length > 0 && !request.force)
+    ? {
+        ...request.context,
+        ticket: {
+          ...request.context.ticket,
+          relevantPosts: request.context.ticket.relevantPosts.filter((p) =>
+            newPostIds.includes(p.id),
+          ),
+        },
+      }
+    : request.context;
+
+  const previousResult = (cached && newPostIds.length > 0 && !request.force)
+    ? cached.result
+    : undefined;
+
+  const prompt = buildAnalysisPrompt(contextForAi, settings, previousResult);
   const result = await generateAnalysis({
     provider,
     apiKey,
@@ -69,8 +92,8 @@ async function handleAnalyze(
   const cache: CachedTicket = {
     url: request.context.ticket.canonicalUrl,
     analyzedAt,
-    consideredPostIds: relevantPostIds,
-    relevantPostCount: relevantPostIds.length,
+    consideredPostIds: allRelevantPostIds,
+    relevantPostCount: allRelevantPostIds.length,
     promptVersion: PROMPT_VERSION,
     result,
   };

@@ -1,12 +1,18 @@
-import type { ExtensionSettings, TicketContext } from './types';
+import type { AnalysisResult, ExtensionSettings, TicketContext } from './types';
 
-export const PROMPT_VERSION = '2026-04-29.v1';
+export const PROMPT_VERSION = '2026-04-29.v2';
 
-export function buildAnalysisPrompt(context: TicketContext, settings: ExtensionSettings) {
+export function buildAnalysisPrompt(
+  context: TicketContext,
+  settings: ExtensionSettings,
+  previousResult?: AnalysisResult,
+) {
   const enabledSections = Object.entries(settings.sections)
     .filter(([, enabled]) => enabled)
     .map(([key]) => key)
     .join(', ');
+
+  const isIncremental = !!previousResult;
 
   const system = [
     'You are an expert WPML technical support assistant.',
@@ -14,18 +20,28 @@ export function buildAnalysisPrompt(context: TicketContext, settings: ExtensionS
     'Return strict JSON only. Do not wrap it in markdown.',
     'The suggested reply must be useful for a WPML supporter, match the ticket language when clear, use [CLIENT] as the customer placeholder, and contain 2 to 4 paragraphs.',
     'Frustration score is 1 to 10, where 10 means very frustrated or angry.',
-  ].join(' ');
+    isIncremental
+      ? 'You are given the previous analysis and only the NEW posts added since then. Update the analysis to reflect the new information.'
+      : '',
+  ].filter(Boolean).join(' ');
+
+  const postsToSend = context.ticket.relevantPosts.map((post) => ({
+    id: post.id,
+    authorName: post.authorName,
+    role: post.role,
+    createdAt: post.createdAt,
+    url: post.url,
+    text: post.text,
+  }));
 
   const user = JSON.stringify(
     {
-      task: 'Analyze this WPML support ticket for the enabled sections.',
+      task: isIncremental
+        ? 'Update this WPML ticket analysis based on the new posts only.'
+        : 'Analyze this WPML support ticket for the enabled sections.',
       enabledSections,
       requiredOutputShape: {
-        frustration: {
-          score: 'integer 1-10',
-          label: 'short label',
-          reasoning: 'brief evidence-based explanation',
-        },
+        frustration: { score: 'integer 1-10', label: 'short label', reasoning: 'brief evidence-based explanation' },
         errata: [{ title: 'string', url: 'absolute URL', whyRelevant: 'string' }],
         customerHistory: [{ title: 'string', url: 'absolute URL', whyRelated: 'string' }],
         similarTickets: [{ title: 'string', url: 'absolute URL', status: 'string or null', whySimilar: 'string' }],
@@ -45,16 +61,11 @@ export function buildAnalysisPrompt(context: TicketContext, settings: ExtensionS
         tags: context.ticket.tags,
         originalCustomer: context.ticket.originalCustomer,
         supporters: context.ticket.supporters,
-        relevantPosts: context.ticket.relevantPosts.map((post) => ({
-          id: post.id,
-          authorName: post.authorName,
-          role: post.role,
-          createdAt: post.createdAt,
-          url: post.url,
-          text: post.text,
-        })),
+        newPosts: isIncremental ? postsToSend : undefined,
+        relevantPosts: isIncremental ? undefined : postsToSend,
       },
-      candidates: {
+      previousAnalysis: isIncremental ? previousResult : undefined,
+      candidates: isIncremental ? undefined : {
         errata: context.errataCandidates,
         customerHistory: context.historyCandidates,
         similarTickets: context.similarTicketCandidates,

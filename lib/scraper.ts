@@ -56,7 +56,8 @@ export async function fetchCustomerHistory(
   currentUrl: string,
 ): Promise<RelatedTicketCandidate[]> {
   if (!profileUrl) return [];
-  const doc = await fetchHtml(profileUrl);
+  const doc = await fetchHtmlOrNull(profileUrl);
+  if (!doc) return [];
   return extractTicketLinks(doc)
     .filter((item) => normalizeTicketUrl(item.url) !== normalizeTicketUrl(currentUrl))
     .slice(0, 3);
@@ -66,7 +67,8 @@ export async function fetchSimilarTickets(ticket: ScrapedTicket): Promise<Relate
   const query = buildSearchQuery(ticket);
   if (!query) return [];
   const url = `https://wpml.org/forums/?s=${encodeURIComponent(query)}`;
-  const doc = await fetchHtml(url);
+  const doc = await fetchHtmlOrNull(url);
+  if (!doc) return [];
   return extractTicketLinks(doc)
     .filter((item) => normalizeTicketUrl(item.url) !== normalizeTicketUrl(ticket.canonicalUrl))
     .slice(0, 3);

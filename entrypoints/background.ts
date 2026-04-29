@@ -25,9 +25,10 @@ export default defineBackground(() => {
   });
 });
 
+// Returns AnalyzeTicketResponse directly — the listener wraps it in BackgroundResponse via toOk/toError
 async function handleAnalyze(
   request: Extract<BackgroundRequest, { type: 'ANALYZE_TICKET' }>,
-): Promise<BackgroundResponse<AnalyzeTicketResponse>> {
+): Promise<AnalyzeTicketResponse> {
   const settings = await getSettings();
   if (!settings.enabled) {
     throw new Error('The extension is disabled in Settings.');
@@ -38,11 +39,11 @@ async function handleAnalyze(
 
   // Return cache if nothing changed
   if (!request.force && cached && !hasNewRelevantPosts(cached, allRelevantPostIds)) {
-    return toOk({
+    return {
       result: cached.result,
       cacheStatus: 'sin-cambios',
       analyzedAt: cached.analyzedAt,
-    });
+    };
   }
 
   const provider = settings.providers.provider;
@@ -89,21 +90,16 @@ async function handleAnalyze(
     user: prompt.user,
   });
   const analyzedAt = new Date().toISOString();
-  const cache: CachedTicket = {
+  await setCachedTicket({
     url: request.context.ticket.canonicalUrl,
     analyzedAt,
     consideredPostIds: allRelevantPostIds,
     relevantPostCount: allRelevantPostIds.length,
     promptVersion: PROMPT_VERSION,
     result,
-  };
-  await setCachedTicket(cache);
-
-  return toOk({
-    result,
-    cacheStatus: 'updated',
-    analyzedAt,
   });
+
+  return { result, cacheStatus: 'updated', analyzedAt };
 }
 
 function toOk<T>(data: T): BackgroundResponse<T> {

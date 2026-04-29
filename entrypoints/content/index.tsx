@@ -5,7 +5,7 @@ import { FloatingPanel } from '@/components/FloatingPanel';
 import './style.css';
 
 export default defineContentScript({
-  matches: ['https://wpml.org/forums/topic/*'],
+  matches: ['https://wpml.org/forums/topic/*', 'https://wpml.org/*/forums/topic/*'],
   cssInjectionMode: 'ui',
 
   async main(ctx) {

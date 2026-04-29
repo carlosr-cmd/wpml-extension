@@ -88,7 +88,9 @@ export function useTicketAnalysis(): TicketAnalysisState {
       }
 
       // 1. Load from cache immediately so the user sees data right away
+      console.log('[wpml-ext] canonical URL:', currentTicket.canonicalUrl);
       const cached = await getCachedTicket(currentTicket.canonicalUrl);
+      console.log('[wpml-ext] cache hit:', !!cached, cached ? `(${cached.consideredPostIds.length} posts)` : '');
       if (cancelled) return;
 
       if (cached) {

@@ -17,7 +17,6 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
     frustration: true,
     errata: true,
     similarTickets: true,
-    suggestedReply: true,
   },
   customInstructions: '',
 };

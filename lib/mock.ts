@@ -27,20 +27,4 @@ export const MOCK_ANALYSIS: AnalysisResult = {
       whySimilar: 'Similar queue symptoms and resolution path.',
     },
   ],
-  suggestedReply: {
-    body:
-      "Hi [CLIENT],\n\nThanks for the additional details. Looking at your description, this matches a known errata where term counts are not updated for translated terms when a term is removed from a post. There is a workaround code snippet you can drop into your theme's functions.php that forces the count to recalculate.\n\nBefore applying it, please make sure you have a full website backup. Once applied, remove and re-add a term on a test post to confirm the counts update correctly on the translated side.\n\nLet me know how it goes and I will keep this ticket assigned to me until we confirm everything works.",
-    language: 'en',
-    sources: [
-      {
-        type: 'errata',
-        url: 'https://wpml.org/errata/removing-a-term-from-a-post-doesnt-reduce-the-count-for-the-translated-terms/',
-        title:
-          "Removing a term from a post doesn't reduce the count for the translated terms",
-      },
-    ],
-    confidence: 'high',
-    confidenceReasoning:
-      'A directly applicable errata exists with a workaround code snippet.',
-  },
 };

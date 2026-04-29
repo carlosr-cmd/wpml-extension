@@ -1,7 +1,5 @@
 export type AiProvider = 'anthropic' | 'openai';
 
-export type ConfidenceLevel = 'high' | 'medium' | 'low';
-
 export type AnalysisPhase =
   | 'idle'
   | 'scraping'
@@ -23,7 +21,6 @@ export interface SectionToggles {
   frustration: boolean;
   errata: boolean;
   similarTickets: boolean;
-  suggestedReply: boolean;
 }
 
 export interface ExtensionSettings {
@@ -100,25 +97,10 @@ export interface SimilarTicketItem {
   whySimilar: string;
 }
 
-export interface ReplySource {
-  type: 'errata' | 'ticket' | 'history' | 'general';
-  url: string | null;
-  title: string;
-}
-
-export interface SuggestedReply {
-  body: string;
-  language: string;
-  sources: ReplySource[];
-  confidence: ConfidenceLevel;
-  confidenceReasoning: string;
-}
-
 export interface AnalysisResult {
   frustration: FrustrationAnalysis;
   errata: ErrataItem[];
   similarTickets: SimilarTicketItem[];
-  suggestedReply: SuggestedReply;
 }
 
 export interface CachedTicket {

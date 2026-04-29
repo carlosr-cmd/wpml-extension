@@ -231,7 +231,6 @@ const SECTION_LABELS: Array<[keyof SectionToggles, string]> = [
   ['frustration', 'Frustration'],
   ['errata', 'Errata'],
   ['similarTickets', 'Similar tickets'],
-  ['suggestedReply', 'Suggested reply'],
 ];
 
 function StatusBadge({ status }: { status: StatusState }) {

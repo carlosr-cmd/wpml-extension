@@ -4,7 +4,6 @@ import { AccordionSection } from './AccordionSection';
 import { FrustrationSection } from './sections/FrustrationSection';
 import { ErrataSection } from './sections/ErrataSection';
 import { SimilarTicketsSection } from './sections/SimilarTicketsSection';
-import { SuggestedReplySection } from './sections/SuggestedReplySection';
 import { frustrationColor } from '@/lib/colors';
 import { useTicketAnalysis } from '@/lib/useTicketAnalysis';
 
@@ -82,15 +81,7 @@ export function FloatingPanel() {
             </AccordionSection>
           )}
 
-          {state.settings?.sections.suggestedReply !== false && (
-            <AccordionSection title="Suggested reply" defaultOpen>
-              {state.result ? (
-                <SuggestedReplySection data={state.result.suggestedReply} />
-              ) : (
-                <SectionPlaceholder />
-              )}
-            </AccordionSection>
-          )}
+
         </>
       </div>
       <Footer cacheStatus={state.cacheStatus} />

@@ -13,6 +13,8 @@ const SUPPORTER_MARKERS = [
   'support team',
   'wpml contractor',
 ];
+const ERRATA_SEARCH_FORM_URL = 'https://wpml.org/en/htmx/known-issues/search-form/';
+const ERRATA_SEARCH_URL = 'https://wpml.org/en/htmx/known-issues/search-issues';
 
 export function scrapeTicket(documentRef: Document = document): ScrapedTicket {
   const canonicalUrl = getCanonicalUrl(documentRef);
@@ -78,6 +80,43 @@ export async function fetchErrataCandidates(ticket: ScrapedTicket): Promise<Erra
   const query = buildSearchQuery(ticket);
   if (!query) return [];
 
+  const htmxResults = await fetchErrataCandidatesFromHtmx(query);
+  if (htmxResults.length > 0) return htmxResults;
+
+  return fetchErrataCandidatesFromPublicSearch(query);
+}
+
+async function fetchErrataCandidatesFromHtmx(query: string): Promise<ErrataCandidate[]> {
+  const formDoc = await fetchHtmlOrNull(ERRATA_SEARCH_FORM_URL);
+  const nonce = formDoc ? extractNonce(formDoc) : null;
+  if (!nonce) return [];
+
+  const body = new URLSearchParams({
+    _wpnonce: nonce,
+    wpml_lang: 'en',
+    wpv_post_search: query,
+    'wpv-relationship-filter': '0',
+    'wpv-wpcf-errata-type': '',
+    'wpv-wpcf-errata-status': '1',
+  });
+
+  const response = await fetch(ERRATA_SEARCH_URL, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+      'HX-Request': 'true',
+      'HX-Target': 'search_issues_results',
+    },
+    body,
+  }).catch(() => null);
+  if (!response?.ok) return [];
+
+  const html = await response.text();
+  return extractErrataLinks(new DOMParser().parseFromString(html, 'text/html')).slice(0, 8);
+}
+
+async function fetchErrataCandidatesFromPublicSearch(query: string): Promise<ErrataCandidate[]> {
   const docs = await Promise.allSettled([
     fetchHtml(`https://wpml.org/?s=${encodeURIComponent(query)}`),
     fetchHtml(`https://wpml.org/known-issues/?s=${encodeURIComponent(query)}`),
@@ -86,6 +125,14 @@ export async function fetchErrataCandidates(ticket: ScrapedTicket): Promise<Erra
   return uniqueByUrl(
     docs.flatMap((result) => (result.status === 'fulfilled' ? extractErrataLinks(result.value) : [])),
   ).slice(0, 8);
+}
+
+function extractNonce(documentRef: Document): string | null {
+  return (
+    documentRef.querySelector<HTMLInputElement>('input[name="_wpnonce"]')?.value ??
+    documentRef.body.textContent?.match(/_wpnonce["']?\s*[:=]\s*["']([a-z0-9]+)["']/i)?.[1] ??
+    null
+  );
 }
 
 function findPostElements(documentRef: Document): Element[] {
@@ -212,6 +259,14 @@ async function fetchHtml(url: string): Promise<Document> {
   if (!response.ok) throw new Error(`Failed to fetch ${url}: ${response.status}`);
   const html = await response.text();
   return new DOMParser().parseFromString(html, 'text/html');
+}
+
+async function fetchHtmlOrNull(url: string): Promise<Document | null> {
+  try {
+    return await fetchHtml(url);
+  } catch {
+    return null;
+  }
 }
 
 function buildSearchQuery(ticket: ScrapedTicket): string {

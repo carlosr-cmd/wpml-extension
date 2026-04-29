@@ -30,7 +30,7 @@ export function useTicketAnalysis(): TicketAnalysisState {
   const [error, setError] = useState<string | null>(null);
   const [settings, setSettings] = useState<PublicSettings | null>(null);
 
-  const runAnalysis = useCallback(async (currentTicket: ScrapedTicket, force: boolean) => {
+  const runAnalysis = useCallback(async (force: boolean) => {
     setError(null);
     setPhase('scraping');
     try {
@@ -45,11 +45,18 @@ export function useTicketAnalysis(): TicketAnalysisState {
       if (!typed.ok || !typed.data) {
         throw new Error(typed.error ?? 'Analysis failed');
       }
+      if (!typed.data.result) {
+        throw new Error('No result returned from background');
+      }
+      // Batch all success state in one update to avoid flicker
       setResult(typed.data.result);
       setCacheStatus(typed.data.cacheStatus);
       setPhase(typed.data.cacheStatus === 'sin-cambios' ? 'cached' : 'ready');
+      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('[wpml-ext] analysis error:', message);
+      setError(message);
       setPhase('error');
     }
   }, []);
@@ -59,7 +66,7 @@ export function useTicketAnalysis(): TicketAnalysisState {
     const currentTicket = scrapeTicket();
     setTicket(currentTicket);
     setCacheStatus(null);
-    await runAnalysis(currentTicket, force);
+    await runAnalysis(force);
   }, [runAnalysis]);
 
   useEffect(() => {
@@ -98,13 +105,13 @@ export function useTicketAnalysis(): TicketAnalysisState {
 
         // 3. New posts exist — re-analyze incrementally (don't clear the existing result)
         if (cancelled) return;
-        await runAnalysis(currentTicket, false);
+        await runAnalysis(false);
         return;
       }
 
       // 4. No cache: auto-analyze only for [Assigned] tickets
       if (titleStartsAssigned(currentTicket)) {
-        await runAnalysis(currentTicket, false);
+        await runAnalysis(false);
         return;
       }
 
@@ -115,7 +122,7 @@ export function useTicketAnalysis(): TicketAnalysisState {
     return () => {
       cancelled = true;
     };
-  }, [runAnalysis]);
+  }, []); // empty deps: init runs once on mount
 
   return useMemo(
     () => ({ phase, ticket, result, cacheStatus, error, settings, analyze }),

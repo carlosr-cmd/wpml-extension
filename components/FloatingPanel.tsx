@@ -42,8 +42,12 @@ export function FloatingPanel() {
       <StatusLine state={state} />
       <div className="wpml-scroll flex-1 overflow-y-auto">
         <>
-          {state.result ? null : (
-            <EmptyState title={state.ticket?.title} phase={state.phase} error={state.error} />
+          {state.phase === 'error' && state.error && (
+            <ErrorBanner message={state.error} />
+          )}
+
+          {!state.result && state.phase !== 'error' && (
+            <EmptyState title={state.ticket?.title} phase={state.phase} />
           )}
 
           {state.settings?.sections.frustration !== false && (
@@ -208,21 +212,20 @@ function StatusLine({ state }: { state: ReturnType<typeof useTicketAnalysis> }) 
   );
 }
 
-function EmptyState({
-  title,
-  phase,
-  error,
-}: {
-  title?: string;
-  phase: string;
-  error: string | null;
-}) {
+function ErrorBanner({ message }: { message: string }) {
+  return (
+    <div className="mx-4 my-3 rounded-md border border-red-200 bg-red-50 px-3 py-2.5">
+      <p className="text-xs font-medium text-red-700">Analysis failed</p>
+      <p className="mt-0.5 break-all text-[11px] text-red-600">{message}</p>
+    </div>
+  );
+}
+
+function EmptyState({ title, phase }: { title?: string; phase: string }) {
   const message =
-    phase === 'error'
-      ? error
-      : phase === 'scraping' || phase === 'analyzing'
-        ? 'Working on the ticket context.'
-        : 'This ticket was not auto-analyzed because the title does not start with [Assigned]. Use Refresh to analyze manually.';
+    phase === 'scraping' || phase === 'analyzing'
+      ? 'Working on the ticket…'
+      : 'This ticket was not auto-analyzed because the title does not start with [Assigned]. Use Refresh to analyze manually.';
 
   return (
     <div className="px-4 py-5">

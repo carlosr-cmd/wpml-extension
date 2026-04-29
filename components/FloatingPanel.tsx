@@ -41,48 +41,78 @@ export function FloatingPanel() {
       />
       <StatusLine state={state} />
       <div className="wpml-scroll flex-1 overflow-y-auto">
-        {state.result ? (
-          <>
+        <>
+          {state.result ? null : (
+            <EmptyState title={state.ticket?.title} phase={state.phase} error={state.error} />
+          )}
+
+          {state.settings?.sections.frustration !== false && (
             <AccordionSection title="Frustration" defaultOpen>
-              <FrustrationSection data={state.result.frustration} />
+              {state.result ? (
+                <FrustrationSection data={state.result.frustration} />
+              ) : (
+                <SectionPlaceholder />
+              )}
             </AccordionSection>
+          )}
 
-            {state.settings?.sections.errata && (
-              <AccordionSection title="Errata" rightSlot={<Count n={state.result.errata.length} />}>
+          {state.settings?.sections.errata !== false && (
+            <AccordionSection title="Errata" rightSlot={<Count n={state.result?.errata.length ?? 0} />}>
+              {state.result ? (
                 <ErrataSection items={state.result.errata} />
-              </AccordionSection>
-            )}
+              ) : (
+                <SectionPlaceholder />
+              )}
+            </AccordionSection>
+          )}
 
-            {state.settings?.sections.customerHistory && (
-              <AccordionSection
-                title="Customer history"
-                rightSlot={<Count n={state.result.customerHistory.length} />}
-              >
+          {state.settings?.sections.customerHistory !== false && (
+            <AccordionSection
+              title="Customer history"
+              rightSlot={<Count n={state.result?.customerHistory.length ?? 0} />}
+            >
+              {state.result ? (
                 <CustomerHistorySection items={state.result.customerHistory} />
-              </AccordionSection>
-            )}
+              ) : (
+                <SectionPlaceholder />
+              )}
+            </AccordionSection>
+          )}
 
-            {state.settings?.sections.similarTickets && (
-              <AccordionSection
-                title="Similar tickets"
-                rightSlot={<Count n={state.result.similarTickets.length} />}
-              >
+          {state.settings?.sections.similarTickets !== false && (
+            <AccordionSection
+              title="Similar tickets"
+              rightSlot={<Count n={state.result?.similarTickets.length ?? 0} />}
+            >
+              {state.result ? (
                 <SimilarTicketsSection items={state.result.similarTickets} />
-              </AccordionSection>
-            )}
+              ) : (
+                <SectionPlaceholder />
+              )}
+            </AccordionSection>
+          )}
 
-            {state.settings?.sections.suggestedReply && (
-              <AccordionSection title="Suggested reply" defaultOpen>
+          {state.settings?.sections.suggestedReply !== false && (
+            <AccordionSection title="Suggested reply" defaultOpen>
+              {state.result ? (
                 <SuggestedReplySection data={state.result.suggestedReply} />
-              </AccordionSection>
-            )}
-          </>
-        ) : (
-          <EmptyState title={state.ticket?.title} phase={state.phase} error={state.error} />
-        )}
+              ) : (
+                <SectionPlaceholder />
+              )}
+            </AccordionSection>
+          )}
+        </>
       </div>
       <Footer cacheStatus={state.cacheStatus} />
     </div>
+  );
+}
+
+function SectionPlaceholder() {
+  return (
+    <p className="text-xs italic" style={{ color: 'var(--wpml-text-subtle)' }}>
+      Empty until analysis runs.
+    </p>
   );
 }
 

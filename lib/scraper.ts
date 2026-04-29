@@ -135,6 +135,7 @@ function scrapeTitle(documentRef: Document): string {
   // bbPress-specific selectors, from most to least specific
   const bbpSelectors = [
     '.bbp-topic-title',
+    'h1.page-title',
     'h1.entry-title',
     '#bbp-topic-title',
     '[class*="topic-title"]',

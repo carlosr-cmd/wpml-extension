@@ -48,6 +48,7 @@ export interface ScrapedTicket {
   canonicalUrl: string;
   status: string | null;
   tags: string[];
+  debugInfoShared: boolean;
   originalCustomer: {
     name: string;
     profileUrl: string | null;

@@ -1,6 +1,6 @@
 import type { AnalysisResult, ExtensionSettings, TicketContext } from './types';
 
-export const PROMPT_VERSION = '2026-05-01.v4';
+export const PROMPT_VERSION = '2026-05-01.v5';
 
 export function buildAnalysisPrompt(
   context: TicketContext,
@@ -69,6 +69,7 @@ export function buildAnalysisPrompt(
       supportGuidelines: [
         'For Missing information, list at most 5 items and only include items that are truly needed for the next support step.',
         'Prefer high-priority asks for WPML debug information, exact reproduction steps, affected URL/content, screenshots, browser/PHP error logs, staging credentials, or Duplicator package only when the ticket context justifies them.',
+        'If ticket.debugInfoShared is true, do not ask for WPML debug information because the customer has already shared it.',
         'For Next best action, choose one decisive action. If an open errata clearly matches, suggest sharing the errata or workaround. If critical data is missing, ask for that first. If enough evidence exists and the issue is complex or reproducible, suggest escalation or a package for deeper debugging.',
         'Do not invent private information, credentials, site details, or internal policy. Use only the provided ticket posts and candidates.',
       ],
@@ -77,6 +78,7 @@ export function buildAnalysisPrompt(
         canonicalUrl: context.ticket.canonicalUrl,
         status: context.ticket.status,
         tags: context.ticket.tags,
+        debugInfoShared: context.ticket.debugInfoShared,
         originalCustomer: context.ticket.originalCustomer,
         supporters: context.ticket.supporters,
         newPosts: isIncremental ? postsToSend : undefined,

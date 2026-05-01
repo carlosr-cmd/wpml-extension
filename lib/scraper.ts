@@ -40,6 +40,7 @@ export function scrapeTicket(documentRef: Document = document): ScrapedTicket {
     canonicalUrl,
     status: extractStatus(title, documentRef),
     tags: scrapeTags(documentRef),
+    debugInfoShared: hasDebugInfoNotice(documentRef),
     originalCustomer,
     supporters,
     posts: classifiedPosts,
@@ -227,6 +228,10 @@ function scrapeTags(documentRef: Document): string[] {
       Array.from(documentRef.querySelectorAll(selector)).map((el) => cleanText(el.textContent ?? '')),
     ),
   ).filter(Boolean);
+}
+
+function hasDebugInfoNotice(documentRef: Document): boolean {
+  return !!documentRef.querySelector('.bbps-debug-info');
 }
 
 function extractStatus(title: string, documentRef: Document): string | null {

@@ -14,6 +14,9 @@ export function FloatingPanel() {
   const [expanded, setExpanded] = useState(false);
   const state = useTicketAnalysis();
   const score = state.result?.frustration.score ?? null;
+  const errataItems = state.relatedErrata ?? (state.relatedErrataLoading ? null : state.result?.errata ?? null);
+  const similarTicketItems =
+    state.relatedSimilarTickets ?? (state.relatedSimilarTicketsLoading ? null : state.result?.similarTickets ?? null);
 
   if (!expanded) {
     return <CollapsedIcon score={score} onClick={() => setExpanded(true)} />;
@@ -82,9 +85,11 @@ export function FloatingPanel() {
           )}
 
           {state.settings?.sections.errata !== false && (
-            <AccordionSection title="Errata" rightSlot={<Count n={state.result?.errata?.length ?? 0} />}>
-              {state.result?.errata ? (
-                <ErrataSection items={state.result.errata} />
+            <AccordionSection title="Errata" rightSlot={<Count n={errataItems?.length ?? 0} />}>
+              {errataItems ? (
+                <ErrataSection items={errataItems} />
+              ) : state.relatedErrataLoading ? (
+                <SearchPlaceholder />
               ) : (
                 <SectionPlaceholder />
               )}
@@ -94,10 +99,12 @@ export function FloatingPanel() {
           {state.settings?.sections.similarTickets !== false && (
             <AccordionSection
               title="Similar tickets"
-              rightSlot={<Count n={state.result?.similarTickets?.length ?? 0} />}
+              rightSlot={<Count n={similarTicketItems?.length ?? 0} />}
             >
-              {state.result?.similarTickets ? (
-                <SimilarTicketsSection items={state.result.similarTickets} />
+              {similarTicketItems ? (
+                <SimilarTicketsSection items={similarTicketItems} />
+              ) : state.relatedSimilarTicketsLoading ? (
+                <SearchPlaceholder />
               ) : (
                 <SectionPlaceholder />
               )}
@@ -124,6 +131,14 @@ function SectionPlaceholder() {
   return (
     <p className="text-xs italic" style={{ color: 'var(--wpml-text-subtle)' }}>
       Empty until analysis runs.
+    </p>
+  );
+}
+
+function SearchPlaceholder() {
+  return (
+    <p className="text-xs italic" style={{ color: 'var(--wpml-text-subtle)' }}>
+      Searching...
     </p>
   );
 }

@@ -43,7 +43,7 @@ async function callAnthropic(args: GenerateArgs & { maxTokens?: number }): Promi
     },
     body: JSON.stringify({
       model: args.model,
-      max_tokens: args.maxTokens ?? 2500,
+      max_tokens: args.maxTokens ?? 1800,
       temperature: 0.2,
       system: args.system,
       messages: [{ role: 'user', content: args.user }],
@@ -68,7 +68,7 @@ async function callOpenAI(args: GenerateArgs & { maxTokens?: number }): Promise<
     body: JSON.stringify({
       model: args.model,
       temperature: 0.2,
-      max_tokens: args.maxTokens ?? 2500,
+      max_tokens: args.maxTokens ?? 1800,
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: args.system },

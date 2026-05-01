@@ -14,7 +14,7 @@ const SUPPORTER_MARKERS = [
   'wpml contractor',
 ];
 
-const MAX_POST_CHARS = 800;
+const MAX_POST_CHARS = 600;
 const ERRATA_SEARCH_FORM_URL = 'https://wpml.org/en/htmx/known-issues/search-form/';
 const ERRATA_SEARCH_URL = 'https://wpml.org/en/htmx/known-issues/search-issues';
 

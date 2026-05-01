@@ -1,6 +1,6 @@
 import type { AnalysisResult, ExtensionSettings, TicketContext } from './types';
 
-export const PROMPT_VERSION = '2026-05-01.v6';
+export const PROMPT_VERSION = '2026-05-01.v7';
 
 export function buildAnalysisPrompt(
   context: TicketContext,
@@ -71,6 +71,7 @@ export function buildAnalysisPrompt(
         'Prefer high-priority asks for WPML debug information, exact reproduction steps, affected URL/content, screenshots, browser/PHP error logs, staging credentials, or Duplicator package only when the ticket context justifies them.',
         'If ticket.debugInfoShared is true, do not ask for WPML debug information because the customer has already shared it.',
         'If ticket.wpMemoryLimit.isBelowRecommended is true, suggest increasing the WordPress memory limit to at least 128M as part of the next action or suggested reply. If it is false, do not suggest increasing memory.',
+        'If candidates.errata or candidates.similarTickets are empty, return empty arrays for those fields instead of inventing links. Related searches may load separately in the UI.',
         'For Next best action, choose one decisive action. If an open errata clearly matches, suggest sharing the errata or workaround. If critical data is missing, ask for that first. If enough evidence exists and the issue is complex or reproducible, suggest escalation or a package for deeper debugging.',
         'Do not invent private information, credentials, site details, or internal policy. Use only the provided ticket posts and candidates.',
       ],
@@ -84,7 +85,7 @@ export function buildAnalysisPrompt(
         originalCustomer: context.ticket.originalCustomer,
         supporters: context.ticket.supporters,
         newPosts: isIncremental ? postsToSend : undefined,
-        relevantPosts: isIncremental ? undefined : postsToSend,
+        relevantPosts: isIncremental ? undefined : limitPostsForPrompt(postsToSend),
       },
       previousAnalysis: isIncremental ? previousResult : undefined,
       candidates: isIncremental ? undefined : {
@@ -97,4 +98,9 @@ export function buildAnalysisPrompt(
   );
 
   return { system, user };
+}
+
+function limitPostsForPrompt<T>(posts: T[]): T[] {
+  if (posts.length <= 8) return posts;
+  return [posts[0], ...posts.slice(-7)];
 }

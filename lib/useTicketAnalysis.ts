@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { browser } from 'wxt/browser';
-import { collectTicketContext } from './context';
 import { PROMPT_VERSION } from './prompt';
 import { getPublicSettings, type PublicSettings } from './publicSettings';
 import { getCachedTicket, hasNewRelevantPosts, isCurrentCache } from './storage';
-import { scrapeTicket, titleStartsAssigned } from './scraper';
+import { fetchErrataCandidates, fetchSimilarTickets, scrapeTicket, titleStartsAssigned } from './scraper';
 import type {
   AnalysisPhase,
   AnalysisResult,
   AnalyzeTicketResponse,
   BackgroundResponse,
+  ErrataItem,
+  RelatedTicketCandidate,
   ScrapedTicket,
+  SimilarTicketItem,
 } from './types';
 
 export interface TicketAnalysisState {
@@ -20,6 +22,10 @@ export interface TicketAnalysisState {
   cacheStatus: 'sin-cambios' | 'updated' | null;
   error: string | null;
   settings: PublicSettings | null;
+  relatedErrata: ErrataItem[] | null;
+  relatedSimilarTickets: SimilarTicketItem[] | null;
+  relatedErrataLoading: boolean;
+  relatedSimilarTicketsLoading: boolean;
   analyze: (force?: boolean) => Promise<void>;
 }
 
@@ -30,16 +36,40 @@ export function useTicketAnalysis(): TicketAnalysisState {
   const [cacheStatus, setCacheStatus] = useState<'sin-cambios' | 'updated' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [settings, setSettings] = useState<PublicSettings | null>(null);
+  const [relatedErrata, setRelatedErrata] = useState<ErrataItem[] | null>(null);
+  const [relatedSimilarTickets, setRelatedSimilarTickets] = useState<SimilarTicketItem[] | null>(null);
+  const [relatedErrataLoading, setRelatedErrataLoading] = useState(false);
+  const [relatedSimilarTicketsLoading, setRelatedSimilarTicketsLoading] = useState(false);
 
-  const runAnalysis = useCallback(async (force: boolean) => {
+  const loadRelatedSearches = useCallback((currentTicket: ScrapedTicket, publicSettings: PublicSettings | null) => {
+    if (publicSettings?.sections.errata !== false) {
+      setRelatedErrataLoading(true);
+      void fetchErrataCandidates(currentTicket)
+        .then((items) => setRelatedErrata(items.map(toErrataItem)))
+        .catch(() => setRelatedErrata([]))
+        .finally(() => setRelatedErrataLoading(false));
+    }
+
+    if (publicSettings?.sections.similarTickets !== false) {
+      setRelatedSimilarTicketsLoading(true);
+      void fetchSimilarTickets(currentTicket)
+        .then((items) => setRelatedSimilarTickets(items.map(toSimilarTicketItem)))
+        .catch(() => setRelatedSimilarTickets([]))
+        .finally(() => setRelatedSimilarTicketsLoading(false));
+    }
+  }, []);
+
+  const runAnalysis = useCallback(async (force: boolean, currentTicket: ScrapedTicket) => {
     setError(null);
-    setPhase('scraping');
+    setPhase('analyzing');
     try {
-      const context = await collectTicketContext();
-      setPhase('analyzing');
       const response = await browser.runtime.sendMessage({
         type: 'ANALYZE_TICKET',
-        context,
+        context: {
+          ticket: currentTicket,
+          errataCandidates: [],
+          similarTicketCandidates: [],
+        },
         force,
       });
       const typed = response as BackgroundResponse<AnalyzeTicketResponse>;
@@ -67,8 +97,11 @@ export function useTicketAnalysis(): TicketAnalysisState {
     const currentTicket = scrapeTicket();
     setTicket(currentTicket);
     setCacheStatus(null);
-    await runAnalysis(force);
-  }, [runAnalysis]);
+    setRelatedErrata(null);
+    setRelatedSimilarTickets(null);
+    loadRelatedSearches(currentTicket, settings);
+    await runAnalysis(force, currentTicket);
+  }, [loadRelatedSearches, runAnalysis, settings]);
 
   useEffect(() => {
     let cancelled = false;
@@ -87,6 +120,8 @@ export function useTicketAnalysis(): TicketAnalysisState {
         setPhase('empty');
         return;
       }
+
+      loadRelatedSearches(currentTicket, publicSettings);
 
       // 1. Load from cache immediately so the user sees data right away
       const cachedTicket = await getCachedTicket(currentTicket.canonicalUrl);
@@ -107,13 +142,13 @@ export function useTicketAnalysis(): TicketAnalysisState {
 
         // 3. New posts exist - re-analyze incrementally without clearing the existing result.
         if (cancelled) return;
-        await runAnalysis(false);
+        await runAnalysis(false, currentTicket);
         return;
       }
 
       // 4. No cache: auto-analyze only for [Assigned] tickets
       if (titleStartsAssigned(currentTicket)) {
-        await runAnalysis(false);
+        await runAnalysis(false, currentTicket);
         return;
       }
 
@@ -127,7 +162,48 @@ export function useTicketAnalysis(): TicketAnalysisState {
   }, []); // empty deps: init runs once on mount
 
   return useMemo(
-    () => ({ phase, ticket, result, cacheStatus, error, settings, analyze }),
-    [phase, ticket, result, cacheStatus, error, settings, analyze],
+    () => ({
+      phase,
+      ticket,
+      result,
+      cacheStatus,
+      error,
+      settings,
+      relatedErrata,
+      relatedSimilarTickets,
+      relatedErrataLoading,
+      relatedSimilarTicketsLoading,
+      analyze,
+    }),
+    [
+      phase,
+      ticket,
+      result,
+      cacheStatus,
+      error,
+      settings,
+      relatedErrata,
+      relatedSimilarTickets,
+      relatedErrataLoading,
+      relatedSimilarTicketsLoading,
+      analyze,
+    ],
   );
+}
+
+function toErrataItem(item: { title: string; url: string; status?: string | null; excerpt?: string }): ErrataItem {
+  return {
+    title: item.title,
+    url: item.url,
+    whyRelevant: item.excerpt || item.status || 'Matched by WPML errata search.',
+  };
+}
+
+function toSimilarTicketItem(item: RelatedTicketCandidate): SimilarTicketItem {
+  return {
+    title: item.title,
+    url: item.url,
+    status: item.status,
+    whySimilar: item.excerpt || 'Matched by WPML forum search.',
+  };
 }

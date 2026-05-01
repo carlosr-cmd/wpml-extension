@@ -3,7 +3,13 @@ import { PROMPT_VERSION } from './prompt';
 import { getCachedTicket, hasNewRelevantPosts, isCurrentCache } from './storage';
 import type { TicketContext } from './types';
 
-export async function collectTicketContext(): Promise<TicketContext> {
+export interface CollectTicketContextOptions {
+  includeErrata?: boolean;
+  includeSimilarTickets?: boolean;
+}
+
+export async function collectTicketContext(options: CollectTicketContextOptions = {}): Promise<TicketContext> {
+  const { includeErrata = true, includeSimilarTickets = true } = options;
   const ticket = scrapeTicket();
 
   // Check cache: if there's a current prior analysis and only new posts exist,
@@ -18,8 +24,8 @@ export async function collectTicketContext(): Promise<TicketContext> {
   }
 
   const [errataCandidates, similarTicketCandidates] = await Promise.all([
-    fetchErrataCandidates(ticket),
-    fetchSimilarTickets(ticket),
+    includeErrata ? fetchErrataCandidates(ticket) : Promise.resolve([]),
+    includeSimilarTickets ? fetchSimilarTickets(ticket) : Promise.resolve([]),
   ]);
 
   return { ticket, errataCandidates, similarTicketCandidates };

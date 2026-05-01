@@ -15,6 +15,8 @@ const SUPPORTER_MARKERS = [
 ];
 
 const MAX_POST_CHARS = 800;
+const ERRATA_SEARCH_FORM_URL = 'https://wpml.org/en/htmx/known-issues/search-form/';
+const ERRATA_SEARCH_URL = 'https://wpml.org/en/htmx/known-issues/search-issues';
 
 export function scrapeTicket(documentRef: Document = document): ScrapedTicket {
   const canonicalUrl = getCanonicalUrl(documentRef);
@@ -47,7 +49,7 @@ export function scrapeTicket(documentRef: Document = document): ScrapedTicket {
   };
 }
 
-// Matches [Assigned], [Asignado], [Assigné], [Zugewiesen], etc.
+// Matches localized assigned prefixes in WPML forum titles.
 const ASSIGNED_PREFIXES = ['[assigned]', '[asignado]', '[assigné]', '[zugewiesen]', '[toegewezen]'];
 
 export function titleStartsAssigned(ticket: ScrapedTicket): boolean {
@@ -69,13 +71,64 @@ export async function fetchSimilarTickets(ticket: ScrapedTicket): Promise<Relate
 export async function fetchErrataCandidates(ticket: ScrapedTicket): Promise<ErrataCandidate[]> {
   const query = buildSearchQuery(ticket);
   if (!query) return [];
-  const doc = await fetchHtmlOrNull(`https://wpml.org/?s=${encodeURIComponent(query)}`);
-  if (!doc) return [];
-  return extractErrataLinks(doc).slice(0, 8);
+
+  const htmxResults = await fetchErrataCandidatesFromHtmx(query);
+  if (htmxResults.length > 0) return htmxResults;
+
+  return fetchErrataCandidatesFromPublicSearch(query);
+}
+
+async function fetchErrataCandidatesFromHtmx(query: string): Promise<ErrataCandidate[]> {
+  const formDoc = await fetchHtmlOrNull(ERRATA_SEARCH_FORM_URL);
+  const nonce = formDoc ? extractNonce(formDoc) : null;
+  if (!nonce) return [];
+
+  const body = new URLSearchParams({
+    _wpnonce: nonce,
+    wpml_lang: 'en',
+    wpv_post_search: query,
+    'wpv-relationship-filter': '0',
+    'wpv-wpcf-errata-type': '',
+    'wpv-wpcf-errata-status': '1',
+  });
+
+  const response = await fetch(ERRATA_SEARCH_URL, {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+      'HX-Request': 'true',
+      'HX-Target': 'search_issues_results',
+    },
+    body,
+  }).catch(() => null);
+  if (!response?.ok) return [];
+
+  const html = await response.text();
+  return extractErrataLinks(new DOMParser().parseFromString(html, 'text/html')).slice(0, 8);
+}
+
+async function fetchErrataCandidatesFromPublicSearch(query: string): Promise<ErrataCandidate[]> {
+  const docs = await Promise.allSettled([
+    fetchHtml(`https://wpml.org/?s=${encodeURIComponent(query)}`),
+    fetchHtml(`https://wpml.org/known-issues/?s=${encodeURIComponent(query)}`),
+  ]);
+
+  return uniqueByUrl(
+    docs.flatMap((result) => (result.status === 'fulfilled' ? extractErrataLinks(result.value) : [])),
+  ).slice(0, 8);
+}
+
+function extractNonce(documentRef: Document): string | null {
+  return (
+    documentRef.querySelector<HTMLInputElement>('input[name="_wpnonce"]')?.value ??
+    documentRef.body.textContent?.match(/_wpnonce["']?\s*[:=]\s*["']([a-z0-9]+)["']/i)?.[1] ??
+    null
+  );
 }
 
 function scrapeTitle(documentRef: Document): string {
-  // Try h1.page-title first — confirmed selector on wpml.org forums
+  // Try h1.page-title first - confirmed selector on wpml.org forums.
   const selectors = ['h1.page-title', 'h1.entry-title', '#bbp-topic-title'];
   for (const sel of selectors) {
     const text = documentRef.querySelector(sel)?.textContent?.trim();
@@ -88,7 +141,7 @@ function scrapeTitle(documentRef: Document): string {
   if (bracketH1?.textContent?.trim()) return bracketH1.textContent.trim();
   // Last resort: strip site name from <title>
   const pageTitle = documentRef.querySelector('title')?.textContent ?? '';
-  return pageTitle.replace(/\s*[|\-–—].*$/, '').trim();
+  return pageTitle.replace(/\s*[|\-\u2013\u2014].*$/, '').trim();
 }
 
 function findPostElements(documentRef: Document): Element[] {
@@ -128,7 +181,7 @@ function scrapePost(element: Element, index: number, canonicalUrl: string): Tick
       element.textContent ??
       '',
   );
-  const text = rawText.length > MAX_POST_CHARS ? rawText.slice(0, MAX_POST_CHARS) + '…' : rawText;
+  const text = rawText.length > MAX_POST_CHARS ? `${rawText.slice(0, MAX_POST_CHARS)}...` : rawText;
 
   return {
     id,

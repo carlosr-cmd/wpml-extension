@@ -4,6 +4,9 @@ import { AccordionSection } from './AccordionSection';
 import { FrustrationSection } from './sections/FrustrationSection';
 import { ErrataSection } from './sections/ErrataSection';
 import { SimilarTicketsSection } from './sections/SimilarTicketsSection';
+import { SuggestedReplySection } from './sections/SuggestedReplySection';
+import { MissingInfoSection } from './sections/MissingInfoSection';
+import { NextBestActionSection } from './sections/NextBestActionSection';
 import { frustrationColor } from '@/lib/colors';
 import { useTicketAnalysis } from '@/lib/useTicketAnalysis';
 
@@ -48,6 +51,26 @@ export function FloatingPanel() {
             <EmptyState title={state.ticket?.title} phase={state.phase} />
           )}
 
+          {state.settings?.sections.nextBestAction !== false && (
+            <AccordionSection title="Next best action" defaultOpen>
+              {state.result ? (
+                <NextBestActionSection data={state.result.nextBestAction} />
+              ) : (
+                <SectionPlaceholder />
+              )}
+            </AccordionSection>
+          )}
+
+          {state.settings?.sections.missingInfo !== false && (
+            <AccordionSection title="Missing information" rightSlot={<Count n={state.result?.missingInfo.length ?? 0} />}>
+              {state.result ? (
+                <MissingInfoSection items={state.result.missingInfo} />
+              ) : (
+                <SectionPlaceholder />
+              )}
+            </AccordionSection>
+          )}
+
           {state.settings?.sections.frustration !== false && (
             <AccordionSection title="Frustration" defaultOpen>
               {state.result ? (
@@ -81,7 +104,15 @@ export function FloatingPanel() {
             </AccordionSection>
           )}
 
-
+          {state.settings?.sections.suggestedReply !== false && (
+            <AccordionSection title="Suggested reply" defaultOpen>
+              {state.result ? (
+                <SuggestedReplySection data={state.result.suggestedReply} />
+              ) : (
+                <SectionPlaceholder />
+              )}
+            </AccordionSection>
+          )}
         </>
       </div>
       <Footer cacheStatus={state.cacheStatus} />
@@ -157,8 +188,8 @@ function Header({
 function StatusLine({ state }: { state: ReturnType<typeof useTicketAnalysis> }) {
   const labels: Record<string, string> = {
     idle: 'Ready',
-    scraping: 'Reading ticket…',
-    analyzing: 'Analyzing with AI…',
+    scraping: 'Reading ticket...',
+    analyzing: 'Analyzing with AI...',
     ready: 'Updated',
     cached: 'Sin cambios',
     empty: 'No automatic analysis',
@@ -201,7 +232,7 @@ function ErrorBanner({ message }: { message: string }) {
 function EmptyState({ title, phase }: { title?: string; phase: string }) {
   const message =
     phase === 'scraping' || phase === 'analyzing'
-      ? 'Working on the ticket…'
+      ? 'Working on the ticket...'
       : 'This ticket was not auto-analyzed because the title does not start with [Assigned]. Use Refresh to analyze manually.';
 
   return (

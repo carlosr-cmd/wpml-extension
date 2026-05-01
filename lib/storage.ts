@@ -32,6 +32,10 @@ export async function clearTicketCache(): Promise<void> {
   }
 }
 
+export function isCurrentCache(cache: CachedTicket | null, promptVersion: string): cache is CachedTicket {
+  return !!cache && cache.promptVersion === promptVersion;
+}
+
 export function hasNewRelevantPosts(cache: CachedTicket | null, postIds: string[]): boolean {
   if (!cache) return true;
   return postIds.some((postId) => !cache.consideredPostIds.includes(postId));

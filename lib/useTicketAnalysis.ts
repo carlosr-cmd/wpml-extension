@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { browser } from 'wxt/browser';
 import { collectTicketContext } from './context';
+import { PROMPT_VERSION } from './prompt';
 import { getPublicSettings, type PublicSettings } from './publicSettings';
-import { getCachedTicket, hasNewRelevantPosts } from './storage';
+import { getCachedTicket, hasNewRelevantPosts, isCurrentCache } from './storage';
 import { scrapeTicket, titleStartsAssigned } from './scraper';
 import type {
   AnalysisPhase,
@@ -88,9 +89,8 @@ export function useTicketAnalysis(): TicketAnalysisState {
       }
 
       // 1. Load from cache immediately so the user sees data right away
-      console.log('[wpml-ext] canonical URL:', currentTicket.canonicalUrl);
-      const cached = await getCachedTicket(currentTicket.canonicalUrl);
-      console.log('[wpml-ext] cache hit:', !!cached, cached ? `(${cached.consideredPostIds.length} posts)` : '');
+      const cachedTicket = await getCachedTicket(currentTicket.canonicalUrl);
+      const cached = isCurrentCache(cachedTicket, PROMPT_VERSION) ? cachedTicket : null;
       if (cancelled) return;
 
       if (cached) {
@@ -102,10 +102,10 @@ export function useTicketAnalysis(): TicketAnalysisState {
         const relevantPostIds = currentTicket.relevantPosts.map((p) => p.id);
         const hasNew = hasNewRelevantPosts(cached, relevantPostIds);
         if (!hasNew) {
-          return; // Nothing new — keep showing cached result
+          return; // Nothing new - keep showing cached result.
         }
 
-        // 3. New posts exist — re-analyze incrementally (don't clear the existing result)
+        // 3. New posts exist - re-analyze incrementally without clearing the existing result.
         if (cancelled) return;
         await runAnalysis(false);
         return;

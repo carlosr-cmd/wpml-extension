@@ -25,9 +25,5 @@ export default defineContentScript({
     });
 
     ui.mount();
-
-    if (import.meta.env.DEV) {
-      console.log('[wpml-ext] mounted on', location.href);
-    }
   },
 });

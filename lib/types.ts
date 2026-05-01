@@ -18,9 +18,12 @@ export interface ProviderSettings {
 }
 
 export interface SectionToggles {
+  nextBestAction: boolean;
+  missingInfo: boolean;
   frustration: boolean;
   errata: boolean;
   similarTickets: boolean;
+  suggestedReply: boolean;
 }
 
 export interface ExtensionSettings {
@@ -97,10 +100,52 @@ export interface SimilarTicketItem {
   whySimilar: string;
 }
 
+export interface MissingInfoItem {
+  item: string;
+  reason: string;
+  priority: 'high' | 'medium' | 'low';
+  suggestedAsk: string;
+}
+
+export interface NextBestAction {
+  action: string;
+  actionType:
+    | 'ask_missing_info'
+    | 'share_errata_workaround'
+    | 'standard_troubleshooting'
+    | 'request_staging_access'
+    | 'request_duplicator_package'
+    | 'escalate_to_second_tier'
+    | 'wait_for_customer'
+    | 'link_similar_ticket'
+    | 'test_conflict';
+  reasoning: string;
+  urgency: 'low' | 'normal' | 'high';
+  replySnippet: string;
+  alternatives: Array<{
+    action: string;
+    whenToUse: string;
+  }>;
+}
+
+export interface SuggestedReply {
+  body: string;
+  confidence: 'high' | 'medium' | 'low';
+  confidenceReasoning: string;
+  sources: Array<{
+    type: 'errata' | 'ticket' | 'general';
+    url: string | null;
+    title: string;
+  }>;
+}
+
 export interface AnalysisResult {
+  nextBestAction: NextBestAction;
+  missingInfo: MissingInfoItem[];
   frustration: FrustrationAnalysis;
   errata: ErrataItem[];
   similarTickets: SimilarTicketItem[];
+  suggestedReply: SuggestedReply;
 }
 
 export interface CachedTicket {

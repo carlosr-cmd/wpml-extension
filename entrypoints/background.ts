@@ -3,7 +3,7 @@ import { browser } from 'wxt/browser';
 import { generateAnalysis, testApiKey } from '@/lib/ai';
 import { buildAnalysisPrompt, PROMPT_VERSION } from '@/lib/prompt';
 import { getSettings } from '@/lib/settings';
-import { getCachedTicket, hasNewRelevantPosts, setCachedTicket } from '@/lib/storage';
+import { getCachedTicket, hasNewRelevantPosts, isCurrentCache, setCachedTicket } from '@/lib/storage';
 import type {
   AnalyzeTicketResponse,
   BackgroundRequest,
@@ -25,7 +25,7 @@ export default defineBackground(() => {
   });
 });
 
-// Returns AnalyzeTicketResponse directly — the listener wraps it in BackgroundResponse via toOk/toError
+// Returns AnalyzeTicketResponse directly; the listener wraps it in BackgroundResponse via toOk/toError.
 async function handleAnalyze(
   request: Extract<BackgroundRequest, { type: 'ANALYZE_TICKET' }>,
 ): Promise<AnalyzeTicketResponse> {
@@ -35,10 +35,16 @@ async function handleAnalyze(
   }
 
   const allRelevantPostIds = request.context.ticket.relevantPosts.map((post) => post.id);
-  const cached = await getCachedTicket(request.context.ticket.canonicalUrl);
+  const cachedTicket = await getCachedTicket(request.context.ticket.canonicalUrl);
+  const cached = isCurrentCache(cachedTicket, PROMPT_VERSION) ? cachedTicket : null;
 
   // Return cache if nothing changed
-  if (!request.force && cached && !hasNewRelevantPosts(cached, allRelevantPostIds)) {
+  if (
+    !request.force &&
+    cached &&
+    cached.promptVersion === PROMPT_VERSION &&
+    !hasNewRelevantPosts(cached, allRelevantPostIds)
+  ) {
     return {
       result: cached.result,
       cacheStatus: 'sin-cambios',
@@ -61,11 +67,12 @@ async function handleAnalyze(
   }
 
   // Incremental: if there's a previous analysis, send only new posts to the AI
-  const newPostIds = cached
+  const canUseCachedAnalysis = cached?.promptVersion === PROMPT_VERSION;
+  const newPostIds = canUseCachedAnalysis
     ? allRelevantPostIds.filter((id) => !cached.consideredPostIds.includes(id))
     : allRelevantPostIds;
 
-  const contextForAi = (cached && newPostIds.length > 0 && !request.force)
+  const contextForAi = (canUseCachedAnalysis && newPostIds.length > 0 && !request.force)
     ? {
         ...request.context,
         ticket: {
@@ -77,7 +84,7 @@ async function handleAnalyze(
       }
     : request.context;
 
-  const previousResult = (cached && newPostIds.length > 0 && !request.force)
+  const previousResult = (canUseCachedAnalysis && newPostIds.length > 0 && !request.force)
     ? cached.result
     : undefined;
 

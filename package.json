@@ -1,6 +1,6 @@
 {
   "name": "wpml-support-assistant",
-  "description": "Chrome extension that assists WPML supporters when responding to forum tickets, using Claude AI to analyze frustration, find related errata and customer history, and suggest replies.",
+  "description": "Chrome extension that assists WPML supporters when responding to forum tickets, using Claude AI to analyze frustration, find related errata, and suggest replies.",
   "private": true,
   "version": "0.1.0",
   "type": "module",

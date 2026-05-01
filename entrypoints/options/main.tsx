@@ -40,7 +40,7 @@ function OptionsPage() {
 
   async function testCurrentKey() {
     setTesting(true);
-    setStatus({ type: 'pending', message: 'Testing API key…' });
+    setStatus({ type: 'pending', message: 'Testing API key...' });
     try {
       const provider = settings.providers.provider;
       const apiKey =
@@ -164,6 +164,10 @@ function OptionsPage() {
             />
           </Field>
         </div>
+        <p className="mt-3 text-xs leading-relaxed text-stone-600">
+          API keys are stored locally in this browser profile and are sent only from the extension
+          background worker to the selected provider. Use dedicated keys with low spending limits.
+        </p>
         <div className="mt-4 flex items-center gap-3">
           <button
             type="button"
@@ -171,7 +175,7 @@ function OptionsPage() {
             onClick={() => void testCurrentKey()}
             className="rounded-md border border-stone-300 bg-white px-3 py-1.5 text-xs font-medium text-stone-800 hover:bg-stone-50 disabled:opacity-50"
           >
-            {testing ? 'Testing…' : 'Test API key'}
+            {testing ? 'Testing...' : 'Test API key'}
           </button>
           <StatusBadge status={status} />
         </div>
@@ -228,9 +232,12 @@ function OptionsPage() {
 }
 
 const SECTION_LABELS: Array<[keyof SectionToggles, string]> = [
+  ['nextBestAction', 'Next best action'],
+  ['missingInfo', 'Missing information'],
   ['frustration', 'Frustration'],
   ['errata', 'Errata'],
   ['similarTickets', 'Similar tickets'],
+  ['suggestedReply', 'Suggested reply'],
 ];
 
 function StatusBadge({ status }: { status: StatusState }) {

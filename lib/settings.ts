@@ -14,9 +14,12 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
     openaiModel: DEFAULT_OPENAI_MODEL,
   },
   sections: {
+    nextBestAction: true,
+    missingInfo: true,
     frustration: true,
     errata: true,
     similarTickets: true,
+    suggestedReply: true,
   },
   customInstructions: '',
 };

@@ -41,6 +41,7 @@ export function scrapeTicket(documentRef: Document = document): ScrapedTicket {
     status: extractStatus(title, documentRef),
     tags: scrapeTags(documentRef),
     debugInfoShared: hasDebugInfoNotice(documentRef),
+    wpMemoryLimit: extractWpMemoryLimit(documentRef),
     originalCustomer,
     supporters,
     posts: classifiedPosts,
@@ -232,6 +233,50 @@ function scrapeTags(documentRef: Document): string[] {
 
 function hasDebugInfoNotice(documentRef: Document): boolean {
   return !!documentRef.querySelector('.bbps-debug-info');
+}
+
+function extractWpMemoryLimit(documentRef: Document): ScrapedTicket['wpMemoryLimit'] {
+  const rows = Array.from(documentRef.querySelectorAll('tr'));
+  const row = rows.find((row) => {
+    const firstCell = row.querySelector('td, th');
+    return cleanText(firstCell?.textContent ?? '').toLowerCase() === 'wp memory limit';
+  });
+  if (!row) return null;
+
+  const cells = Array.from(row.querySelectorAll('td, th'));
+  const raw = cleanText(cells[1]?.textContent ?? '');
+  if (!raw) return null;
+
+  const megabytes = parseMemoryLimitToMb(raw);
+  return {
+    raw,
+    megabytes,
+    isBelowRecommended: megabytes !== null && megabytes < 128,
+  };
+}
+
+function parseMemoryLimitToMb(value: string): number | null {
+  const normalized = value.trim().replace(',', '.').toLowerCase();
+  const match = normalized.match(/^(\d+(?:\.\d+)?)\s*([kmgt]?)(?:i?b)?$/);
+  if (!match) return null;
+
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount)) return null;
+
+  switch (match[2]) {
+    case 'g':
+      return amount * 1024;
+    case 'm':
+      return amount;
+    case 'k':
+      return amount / 1024;
+    case 't':
+      return amount * 1024 * 1024;
+    case '':
+      return amount / 1024 / 1024;
+    default:
+      return null;
+  }
 }
 
 function extractStatus(title: string, documentRef: Document): string | null {

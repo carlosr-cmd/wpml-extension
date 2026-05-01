@@ -49,6 +49,11 @@ export interface ScrapedTicket {
   status: string | null;
   tags: string[];
   debugInfoShared: boolean;
+  wpMemoryLimit: {
+    raw: string;
+    megabytes: number | null;
+    isBelowRecommended: boolean;
+  } | null;
   originalCustomer: {
     name: string;
     profileUrl: string | null;

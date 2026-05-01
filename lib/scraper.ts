@@ -60,13 +60,18 @@ export function titleStartsAssigned(ticket: ScrapedTicket): boolean {
 }
 
 export async function fetchSimilarTickets(ticket: ScrapedTicket): Promise<RelatedTicketCandidate[]> {
-  const query = buildSearchQuery(ticket);
+  const profile = buildSimilarityProfile(ticket);
+  const query = profile.query;
   if (!query) return [];
   const url = `https://wpml.org/forums/?s=${encodeURIComponent(query)}`;
   const doc = await fetchHtmlOrNull(url);
   if (!doc) return [];
   return extractTicketLinks(doc)
     .filter((item) => normalizeTicketUrl(item.url) !== normalizeTicketUrl(ticket.canonicalUrl))
+    .map((item) => ({ item, score: scoreSimilarTicket(item, profile) }))
+    .filter(({ score }) => score >= profile.minimumScore)
+    .sort((a, b) => b.score - a.score)
+    .map(({ item }) => item)
     .slice(0, 3);
 }
 
@@ -339,6 +344,129 @@ function buildSearchQuery(ticket: ScrapedTicket): string {
   const title = ticket.title.replace(/^\[[^\]]+\]\s*/, '');
   const tags = ticket.tags.slice(0, 3).join(' ');
   return cleanText(`${title} ${tags}`).split(/\s+/).slice(0, 10).join(' ');
+}
+
+interface SimilarityProfile {
+  query: string;
+  requiredTerms: string[];
+  keywords: string[];
+  minimumScore: number;
+}
+
+const IMPORTANT_PLUGIN_TERMS = [
+  'acf',
+  'avada',
+  'beaver',
+  'bricks',
+  'divi',
+  'elementor',
+  'facetwp',
+  'gutenberg',
+  'oxygen',
+  'polylang',
+  'toolset',
+  'woocommerce',
+  'wpbakery',
+  'yoast',
+];
+
+const SEARCH_STOP_WORDS = new Set([
+  'about',
+  'after',
+  'also',
+  'and',
+  'are',
+  'assigned',
+  'but',
+  'can',
+  'cannot',
+  'com',
+  'does',
+  'doesn',
+  'don',
+  'for',
+  'from',
+  'have',
+  'how',
+  'into',
+  'issue',
+  'not',
+  'org',
+  'page',
+  'please',
+  'problem',
+  'resolved',
+  'site',
+  'that',
+  'the',
+  'this',
+  'ticket',
+  'with',
+  'wpml',
+  'www',
+  'you',
+]);
+
+function buildSimilarityProfile(ticket: ScrapedTicket): SimilarityProfile {
+  const title = ticket.title.replace(/^\[[^\]]+\]\s*/, '');
+  const customerText = ticket.relevantPosts
+    .filter((post) => post.role === 'original_customer')
+    .slice(0, 2)
+    .map((post) => post.text)
+    .join(' ');
+  const source = `${title} ${ticket.tags.join(' ')} ${customerText}`;
+  const tokens = tokenizeForSearch(source);
+  const requiredTerms = IMPORTANT_PLUGIN_TERMS.filter((term) => tokens.includes(term));
+  const frequency = new Map<string, number>();
+
+  for (const token of tokens) {
+    if (!requiredTerms.includes(token)) {
+      frequency.set(token, (frequency.get(token) ?? 0) + 1);
+    }
+  }
+
+  const keywords = [...frequency.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([token]) => token)
+    .filter((token) => token.length > 3)
+    .slice(0, 8);
+  const queryTerms = unique([...requiredTerms, ...keywords]).slice(0, 8);
+
+  return {
+    query: queryTerms.join(' '),
+    requiredTerms,
+    keywords,
+    minimumScore: requiredTerms.length > 0 ? 3 : 4,
+  };
+}
+
+function scoreSimilarTicket(item: RelatedTicketCandidate, profile: SimilarityProfile): number {
+  const haystack = tokenizeForSearch(`${item.title} ${item.excerpt ?? ''}`);
+  const haystackSet = new Set(haystack);
+
+  if (profile.requiredTerms.length > 0 && !profile.requiredTerms.some((term) => haystackSet.has(term))) {
+    return 0;
+  }
+
+  let score = 0;
+  for (const term of profile.requiredTerms) {
+    if (haystackSet.has(term)) score += 3;
+  }
+  for (const keyword of profile.keywords) {
+    if (haystackSet.has(keyword)) score += 1;
+  }
+
+  return score;
+}
+
+function tokenizeForSearch(value: string): string[] {
+  return cleanText(value)
+    .toLowerCase()
+    .replace(/https?:\/\/\S+/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .split(' ')
+    .map((token) => token.trim())
+    .filter((token) => token.length > 2 && !SEARCH_STOP_WORDS.has(token));
 }
 
 function cleanText(value: string): string {

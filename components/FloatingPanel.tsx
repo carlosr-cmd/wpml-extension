@@ -53,7 +53,7 @@ export function FloatingPanel() {
 
           {state.settings?.sections.nextBestAction !== false && (
             <AccordionSection title="Next best action" defaultOpen>
-              {state.result ? (
+              {state.result?.nextBestAction ? (
                 <NextBestActionSection data={state.result.nextBestAction} />
               ) : (
                 <SectionPlaceholder />
@@ -62,8 +62,8 @@ export function FloatingPanel() {
           )}
 
           {state.settings?.sections.missingInfo !== false && (
-            <AccordionSection title="Missing information" rightSlot={<Count n={state.result?.missingInfo.length ?? 0} />}>
-              {state.result ? (
+            <AccordionSection title="Missing information" rightSlot={<Count n={state.result?.missingInfo?.length ?? 0} />}>
+              {state.result?.missingInfo ? (
                 <MissingInfoSection items={state.result.missingInfo} />
               ) : (
                 <SectionPlaceholder />
@@ -73,7 +73,7 @@ export function FloatingPanel() {
 
           {state.settings?.sections.frustration !== false && (
             <AccordionSection title="Frustration" defaultOpen>
-              {state.result ? (
+              {state.result?.frustration ? (
                 <FrustrationSection data={state.result.frustration} />
               ) : (
                 <SectionPlaceholder />
@@ -82,8 +82,8 @@ export function FloatingPanel() {
           )}
 
           {state.settings?.sections.errata !== false && (
-            <AccordionSection title="Errata" rightSlot={<Count n={state.result?.errata.length ?? 0} />}>
-              {state.result ? (
+            <AccordionSection title="Errata" rightSlot={<Count n={state.result?.errata?.length ?? 0} />}>
+              {state.result?.errata ? (
                 <ErrataSection items={state.result.errata} />
               ) : (
                 <SectionPlaceholder />
@@ -94,9 +94,9 @@ export function FloatingPanel() {
           {state.settings?.sections.similarTickets !== false && (
             <AccordionSection
               title="Similar tickets"
-              rightSlot={<Count n={state.result?.similarTickets.length ?? 0} />}
+              rightSlot={<Count n={state.result?.similarTickets?.length ?? 0} />}
             >
-              {state.result ? (
+              {state.result?.similarTickets ? (
                 <SimilarTicketsSection items={state.result.similarTickets} />
               ) : (
                 <SectionPlaceholder />
@@ -106,7 +106,7 @@ export function FloatingPanel() {
 
           {state.settings?.sections.suggestedReply !== false && (
             <AccordionSection title="Suggested reply" defaultOpen>
-              {state.result ? (
+              {state.result?.suggestedReply ? (
                 <SuggestedReplySection data={state.result.suggestedReply} />
               ) : (
                 <SectionPlaceholder />

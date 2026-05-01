@@ -9,7 +9,7 @@ const CONFIDENCE_META: Record<SuggestedReply['confidence'], { label: string; bg:
 
 export function SuggestedReplySection({ data }: { data: SuggestedReply }) {
   const [copied, setCopied] = useState(false);
-  const confidence = CONFIDENCE_META[data.confidence];
+  const confidence = CONFIDENCE_META[data.confidence] ?? CONFIDENCE_META.low;
 
   async function copyReply() {
     await navigator.clipboard.writeText(data.body);
